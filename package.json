@@ -1,17 +1,17 @@
 {
-  "name": "react-geolookup",
-  "version": "1.1.0",
+  "name": "react-geolookup-v2",
+  "version": "2.0.0",
   "description": "A React autosuggest / lookup component that can utilize the Google Maps Places API, Open Street Maps Nominatim service, or a custom Geocoding service.",
   "main": "dist/Geolookup.js",
-  "author": "Mark Lewis <mark.lewis@sourcefabric.org>",
-  "homepage": "https://github.com/superdesk/react-geolookup",
+  "author": "Nick Lamping",
+  "homepage": "https://github.com/lampnik/react-geolookup",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/superdesk/react-geolookup.git"
+    "url": "https://github.com/lampnik/react-geolookup.git"
   },
   "bugs": {
-    "url": "https://github.com/ubilabs/react-geolookup/issues"
+    "url": "https://github.com/lampnik/react-geolookup/issues"
   },
   "peerDependencies": {
     "react": "16.8.6"
