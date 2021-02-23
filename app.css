@@ -172,3 +172,8 @@ h1 {
 .geolookup__item--active:focus {
   background: #ccc;
 }
+
+.form-error {
+  border: 2px solid red;
+  box-shadow: 0 0 1px red;
+}
