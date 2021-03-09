@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { GeolookupSelect } from '../../src/GeolookupSelect';
+import { GeolookupSelect } from '../../src';
 
 // IMPORTANT: nominatim-browser is only included in dev dependencies
 import * as Nominatim from 'nominatim-browser';
