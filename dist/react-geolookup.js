@@ -1805,7 +1805,8 @@ var Geolookup = function (_React$Component) {
             isLoading: false,
             userInput: props.initialValue,
             activeSuggest: null,
-            suggests: []
+            suggests: [],
+            error: false
         };
 
         _this.onInputChange = _this.onInputChange.bind(_this);
@@ -2330,7 +2331,7 @@ var Geolookup = function (_React$Component) {
                 classes = (0, _classnames2.default)('geolookup', this.props.className, { 'geolookup--loading': this.state.isLoading }),
                 shouldRenderLabel = this.props.label && attributes.id,
                 shouldRenderButton = this.props.disableAutoLookup,
-                input = _react2.default.createElement(_input2.default, _extends({ className: this.props.inputClassName,
+                input = _react2.default.createElement(_input2.default, _extends({ className: this.props.error ? this.props.inputClassName + ' form-error' : this.props.inputClassName,
                 ref: function ref(node) {
                     return _this6.dom.input = node;
                 },

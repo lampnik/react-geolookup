@@ -8,7 +8,7 @@ import defaults from './defaults';
 import propTypes from './prop-types';
 import filterInputAttributes from './filter-input-attributes';
 
-import Input from './input';
+import AsyncSelect from 'react-select/async';
 import SuggestList from './suggest-list';
 
 // Escapes special characters in user input for regex
@@ -19,7 +19,7 @@ function escapeRegExp(str) {
 /**
  * Entry point for the Geolookup component
  */
-class Geolookup extends React.Component {
+class GeolookupSelect extends React.Component {
     /**
    * The constructor. Sets the initial state.
    * @param  {Object} props The properties object.
@@ -32,7 +32,8 @@ class Geolookup extends React.Component {
             userInput: props.initialValue,
             activeSuggest: null,
             suggests: [],
-            error: false
+            error: false,
+            typing: false
         };
 
         this.onInputChange = this.onInputChange.bind(this);
@@ -58,6 +59,8 @@ class Geolookup extends React.Component {
         this.activateSuggest = this.activateSuggest.bind(this);
         this.selectSuggest = this.selectSuggest.bind(this);
         this.geocodeSuggest = this.geocodeSuggest.bind(this);
+        this.loadOptions = this.loadOptions.bind(this);
+        this.onChangeSuggestion = this.onChangeSuggestion.bind(this);
 
         if (props.queryDelay) {
             this.onAfterInputChange =
@@ -221,20 +224,60 @@ class Geolookup extends React.Component {
     /**
    * Search for new suggests
    */
+    loadOptions(inputValue, callback) {
+        const self = this;
+
+        if (this.state.typingTimeout) {
+            clearTimeout(this.state.typingTimeout);
+         }
+     
+         this.setState({
+            name: event.target.value,
+            typingTimeout: setTimeout(function () {
+                self.props.onSuggestsLookup(inputValue)
+                .then((suggestsResults) => {
+                    self.setState({isLoading: false});
+                    self.updateSuggests(suggestsResults || [], // can be null
+                        () => {
+                            if (self.props.autoActivateFirstSuggest &&
+            !self.state.activeSuggest
+                            ) {
+                                self.activateSuggest('next');
+                            }
+                        });
+
+                    return suggestsResults.map(s => {
+                        return {
+                            label: s.display_name,
+                            value: s
+                        }
+                    })
+                })
+                .catch((error) => {
+                    console.error('onSuggestsLookup Search Error: ', error);
+                }).then(results => {
+                    callback(results)
+                })
+              }, 1000)
+         });
+
+        
+    }
+
     searchSuggests() {
         if (!this.state.userInput) {
             this.updateSuggests();
-            return;
+            return setTimeout(() => [], 1000);
         }
 
-        this.setState({isLoading: true}, () => {
+        return this.setState({isLoading: true}, () => {
             if (typeof this.props.onSuggestsLookup() === 'undefined') {
                 if (this.props.geocodeProvider) {
                     // Use props defined geocodeProvider.lookup
-                    this.props.geocodeProvider.lookup(this.state.userInput)
+                    return this.props.geocodeProvider.lookup(this.state.userInput)
                         .then((suggestsResults) => {
                             this.setState({isLoading: false});
-                            this.updateSuggests(suggestsResults || [], // can be null
+                            return this.updateSuggests(suggestsResults || [], // can be null
                                 () => {
                                     if (this.props.autoActivateFirstSuggest &&
                   !this.state.activeSuggest
@@ -263,11 +306,11 @@ class Geolookup extends React.Component {
                             country: this.props.country,
                         };
                     }
-                    this.autocompleteService.getPlacePredictions(
+                    return this.autocompleteService.getPlacePredictions(
                         options,
                         (suggestsResults) => {
                             this.setState({isLoading: false});
-                            this.updateSuggests(suggestsResults || [], // can be null
+                            return this.updateSuggests(suggestsResults || [], // can be null
                                 () => {
                                     if (this.props.autoActivateFirstSuggest &&
                     !this.state.activeSuggest
@@ -280,7 +323,7 @@ class Geolookup extends React.Component {
                 }
             } else {
                 // Use props defined onSuggestLookup
-                this.props.onSuggestsLookup(this.state.userInput)
+                return this.props.onSuggestsLookup(this.state.userInput)
                     .then((suggestsResults) => {
                         this.setState({isLoading: false});
                         this.updateSuggests(suggestsResults || [], // can be null
@@ -291,6 +334,13 @@ class Geolookup extends React.Component {
                                     this.activateSuggest('next');
                                 }
                             });
+
+                        return suggestsResults.map(s => {
+                            return {
+                                label: s.display_name,
+                                value: s.place_id
+                            }
+                        })
                     })
                     .catch((error) => {
                         console.error('onSuggestsLookup Search Error: ', error);
@@ -340,6 +390,12 @@ class Geolookup extends React.Component {
         activeSuggest = this.updateActiveSuggest(suggests);
         this.props.onSuggestResults(suggests);
         this.setState({suggests, activeSuggest}, callback);
+        return suggestsResults.map(s => {
+            return {
+                label: s.placeId,
+                value: s.placeId
+            }
+        })
     }
 
     /**
@@ -444,6 +500,35 @@ class Geolookup extends React.Component {
         this.geocodeSuggest(suggest);
     }
 
+
+    onChangeSuggestion(suggest) {
+        if (!suggest) {
+            // eslint-disable-next-line no-param-reassign
+            suggest = {
+                label: this.state.userInput,
+            };
+        }
+
+        this.setState({
+            isSuggestsHidden: true,
+            userInput: suggest.label,
+        });
+
+        if (suggest.location) {
+            this.setState({ignoreBlur: false});
+            this.props.onSuggestSelect(suggest);
+            return;
+        }
+
+        const geocodeSuggestValue = {
+            label: this.props.getSuggestLabel(suggest.value),
+            placeId: suggest.value.place_id,
+            raw: suggest.value,
+            isFixture: false,
+        }
+        this.geocodeSuggest(geocodeSuggestValue);
+    }
+
     /**
    * Geocode a suggest
    * @param  {Object} suggest The suggest
@@ -484,6 +569,15 @@ class Geolookup extends React.Component {
         }
     }
 
+    /*
+    {
+        label: this.props.getSuggestLabel(suggest),
+        placeId: suggest.place_id,
+        raw: suggest,
+        isFixture: false,
+    }
+    */
+
     /**
    * Render the view
    * @return {Function} The React element to render
@@ -497,35 +591,24 @@ class Geolookup extends React.Component {
             ),
             shouldRenderLabel = this.props.label && attributes.id,
             shouldRenderButton = this.props.disableAutoLookup,
-            input = <Input className={ this.props.error ? `${this.props.inputClassName} form-error` : this.props.inputClassName }
+            input = <AsyncSelect className={ this.props.error ? `${this.props.inputClassName} form-error` : this.props.inputClassName }
                 ref={(node) => this.dom.input = node}
                 value={this.state.userInput}
                 ignoreEnter={!this.state.isSuggestsHidden}
                 ignoreTab={this.props.ignoreTab}
                 style={this.props.style.input}
-                onChange={this.onInputChange}
+                onInputChange={this.onInputChange}
                 onFocus={this.onInputFocus}
                 onBlur={this.onInputBlur}
                 onKeyPress={this.props.onKeyPress}
                 onNext={this.onNext}
                 onPrev={this.onPrev}
-                onSelect={this.onSelect}
+                onChange={this.onChangeSuggestion}
+                loadOptions={this.loadOptions}
                 onEscape={this.hideSuggests} {...attributes} />,
             button = <button className={this.props.buttonClassName}
                 type="button"
-                onClick={this.onButtonClick}>{this.props.buttonText}</button>,
-            suggestionsList = <SuggestList isHidden={this.state.isSuggestsHidden}
-                style={this.props.style.suggests}
-                suggestItemStyle={this.props.style.suggestItem}
-                suggests={this.state.suggests}
-                hiddenClassName={this.props.suggestsHiddenClassName}
-                suggestItemActiveClassName={this.props.suggestItemActiveClassName}
-                activeSuggest={this.state.activeSuggest}
-                onSuggestNoResults={this.onSuggestNoResults}
-                onSuggestMouseDown={this.onSuggestMouseDown}
-                onSuggestMouseOut={this.onSuggestMouseOut}
-                onSuggestSelect={this.selectSuggest}
-                suggestItemLabelRenderer={this.props.suggestItemLabelRenderer} />;
+                onClick={this.onButtonClick}>{this.props.buttonText}</button>;
 
         return <div className={classes}>
             <span className="geolookup__input-wrapper">
@@ -540,9 +623,6 @@ class Geolookup extends React.Component {
             {button}
         </span>
             }
-            <div className="geolookup__suggests-wrapper">
-                {suggestionsList}
-            </div>
         </div>;
     }
 }
@@ -551,12 +631,12 @@ class Geolookup extends React.Component {
  * Types for the properties
  * @type {Object}
  */
-Geolookup.propTypes = propTypes;
+GeolookupSelect.propTypes = propTypes;
 
 /**
  * Default values for the properties
  * @type {Object}
  */
-Geolookup.defaultProps = defaults;
+GeolookupSelect.defaultProps = defaults;
 
-export default Geolookup;
+export { GeolookupSelect };
