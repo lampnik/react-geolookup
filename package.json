@@ -1,8 +1,8 @@
 {
   "name": "react-geolookup-v2",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "description": "A React autosuggest / lookup component that can utilize the Google Maps Places API, Open Street Maps Nominatim service, or a custom Geocoding service.",
-  "main": "dist/Geolookup.js",
+  "main": "dist/index.js",
   "author": "Nick Lamping",
   "homepage": "https://github.com/lampnik/react-geolookup",
   "license": "MIT",
